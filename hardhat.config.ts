@@ -3,6 +3,7 @@ import "./tasks/compile";
 import "@nomiclabs/hardhat-waffle";
 require('@nomiclabs/hardhat-ethers');
 require("@nomiclabs/hardhat-etherscan");
+require('hardhat-contract-sizer');
 require("dotenv").config();
 
 // This is a sample Hardhat task. To learn how to create your own go to
@@ -74,4 +75,9 @@ export default {
         // Obtain one at https://bscscan.com/
         apiKey: process.env.API_KEY,
     },
+    contractSizer: {
+      alphaSort: true,
+      runOnCompile: false,
+      disambiguatePaths: false,
+    }
 };

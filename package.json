@@ -2,6 +2,7 @@
   "name": "hardhat-project",
   "scripts": {
     "build": "npx hardhat compile",
+    "size": "npx hardhat size-contracts",
     "clean": "rm -rf artifacts && rm -rf cache && rm -rf types",
     "deploy": "npx hardhat run --network mainnet scripts/deploy.ts",
     "balance": "npx hardhat run --network mainnet scripts/account-balance.ts",
@@ -20,6 +21,7 @@
     "ethereum-waffle": "^3.2.2",
     "ethers": "^5.0.31",
     "hardhat": "^2.0.10",
+    "hardhat-contract-sizer": "^2.0.3",
     "rlp": "^2.2.6",
     "ts-generator": "^0.1.1",
     "ts-node": "^9.1.1",
