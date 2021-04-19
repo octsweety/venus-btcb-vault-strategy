@@ -1,8 +1,8 @@
 import * as hre from 'hardhat';
-import { WaultWbnbVault } from '../types/ethers-contracts/WaultWbnbVault';
-import { WaultWbnbVault__factory } from '../types/ethers-contracts/factories/WaultWbnbVault__factory';
-import { WaultWbnbVenusStrategy } from '../types/ethers-contracts/WaultWbnbVenusStrategy';
-import { WaultWbnbVenusStrategy__factory } from '../types/ethers-contracts/factories/WaultWbnbVenusStrategy__factory';
+import { WaultBtcbVault } from '../types/ethers-contracts/WaultBtcbVault';
+import { WaultBtcbVault__factory } from '../types/ethers-contracts/factories/WaultBtcbVault__factory';
+import { WaultBtcbVenusStrategy } from '../types/ethers-contracts/WaultBtcbVenusStrategy';
+import { WaultBtcbVenusStrategy__factory } from '../types/ethers-contracts/factories/WaultBtcbVenusStrategy__factory';
 import { ERC20__factory } from '../types/ethers-contracts/factories/ERC20__factory';
 import { assert } from 'sinon';
 
@@ -23,6 +23,10 @@ const toEther = (val) => {
     return ethers.utils.formatEther(val);
 }
 
+const parseEther = (val) => {
+    return ethers.utils.parseEther(val);
+}
+
 async function deploy() {
     console.log((new Date()).toLocaleString());
     
@@ -37,25 +41,33 @@ async function deploy() {
     console.log("Account balance:", (await deployer.getBalance()).toString());
 
     const mainnet = process.env.NETWORK == "mainnet" ? true : false;
-    const wbnbAddress = mainnet ? process.env.WBNB_MAIN : process.env.WBNB_TEST
+    const url = mainnet ? process.env.URL_MAIN : process.env.URL_TEST;
+    const btcbAddress = mainnet ? process.env.BTCB_MAIN : process.env.BTCB_TEST
     const vaultAddress = mainnet ? process.env.VAULT_MAIN : process.env.VAULT_TEST
     const strategyAddress = mainnet ? process.env.STRATEGY_MAIN : process.env.STRATEGY_TEST
 
-    const vaultFactory: WaultWbnbVault__factory = new WaultWbnbVault__factory(deployer);
-    let vault: WaultWbnbVault = await vaultFactory.attach(vaultAddress).connect(deployer);
+    const vaultFactory: WaultBtcbVault__factory = new WaultBtcbVault__factory(deployer);
+    let vault: WaultBtcbVault = await vaultFactory.attach(vaultAddress).connect(deployer);
     if ("redeploy" && false) {
-        vault = await vaultFactory.deploy(wbnbAddress);
+        vault = await vaultFactory.deploy(btcbAddress);
     }
     console.log(`Deployed Vault... (${vault.address})`);
-    const strategyFactory: WaultWbnbVenusStrategy__factory = new WaultWbnbVenusStrategy__factory(deployer);
-    let strategy: WaultWbnbVenusStrategy = strategyFactory.attach(strategyAddress).connect(deployer);
-    if ("redeploy" && false) {
+    const strategyFactory: WaultBtcbVenusStrategy__factory = new WaultBtcbVenusStrategy__factory(deployer);
+    let strategy: WaultBtcbVenusStrategy;// = strategyFactory.attach(strategyAddress).connect(deployer);
+    if ("redeploy" && true) {
         strategy = await strategyFactory.deploy(vault.address);
     }
     console.log(`Deployed Strategy... (${strategy.address})`);
 
     console.log("Setting strategy address...");
     await vault.setStrategy(strategy.address);
+    // console.log("Setting Wault reward factors...");
+    // const block = await ethers.getDefaultProvider(url).getBlockNumber();
+    // await vault.setWaultRewardFactors(parseEther('1000'), block, block+864000);
+    if ("Disable Wault Reward" && false) {
+        await vault.setWaultRewardMode(false);
+    }
+    // await strategy.setOnlyGov(false);
     
     const afterBalance = await deployer.getBalance();
     console.log(

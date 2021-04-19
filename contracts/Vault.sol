@@ -42,6 +42,7 @@ contract WaultBtcbVault is ERC20, Ownable {
     bool public enabledWaultReward = true;
     uint256 public startForDistributeWault;
     uint256 public endForDistributeWault;
+    uint256 public waultFeeFactor = uint256(1e10);
     // 100 WAULT rewards per month in default
     uint256 public waultRewardPerBlock = uint256(100 ether).div(864000);
     uint256 public lastRewardBlock;
@@ -87,6 +88,8 @@ contract WaultBtcbVault is ERC20, Ownable {
         token = IERC20(_token);
 
         tokenToWaultPath = [_token, wbnb, wault];
+
+        IERC20(wault).safeApprove(pancakeRouter, uint256(-1));
     }
 
     function setStrategy(address _strategy) external onlyOwner {
@@ -165,8 +168,9 @@ contract WaultBtcbVault is ERC20, Ownable {
      */
     function earn() public {
         uint _bal = available();
-        token.safeTransfer(strategy, _bal);
-        IStrategy(strategy).deposit();
+        // token.safeTransfer(strategy, _bal);
+        token.safeApprove(strategy, _bal);
+        IStrategy(strategy).deposit(_bal);
     }
 
     /**
@@ -228,7 +232,18 @@ contract WaultBtcbVault is ERC20, Ownable {
     }
 
     function claimable(address _user) public view returns (uint256) {
-        return userInfo[_user].pendingRewards;
+        UserInfo storage user = userInfo[_user];
+        uint256 pending = 0;
+        if (block.number <= endForDistributeWault
+        && block.number >= startForDistributeWault
+        && lastRewardBlock != 0
+        && totalSupply() > 0) {
+            uint256 blocks = block.number.sub(lastRewardBlock);
+            uint256 waultReward = blocks.mul(waultRewardPerBlock);
+            uint256 currentAccWaultPerShare = accWaultPerShare.add(waultReward.mul(1e12).div(totalSupply()));
+            pending = user.amount.mul(currentAccWaultPerShare).div(1e12).sub(user.rewardDebt);
+        }
+        return user.pendingRewards + pending;
     }
 
     function _updatePendingReward(address _user) internal {
@@ -246,7 +261,7 @@ contract WaultBtcbVault is ERC20, Ownable {
 
         UserInfo storage user = userInfo[_user];
         if (isDeposit) user.amount = user.amount.add(_amount);
-        else user.amount = user.amount.sub(_amount);
+        else user.amount = user.amount > _amount ? user.amount.sub(_amount) : 0;
         user.rewardDebt = user.amount.mul(accWaultPerShare).div(1e12);
     }
 
@@ -271,7 +286,17 @@ contract WaultBtcbVault is ERC20, Ownable {
         if (_amount > waultBal) {
             _amount = waultBal;
         }
+        _amount = _amount > waultFeeFactor ? _amount.sub(waultFeeFactor) : 0;
         if (_amount > 0) IERC20(wault).safeTransfer(_to, _amount);
+        return _amount;
+    }
+
+    function withdrawWault(uint256 _amount) public onlyAdmin returns (uint256) {
+        uint256 waultBal = balanceOfWault();
+        if (_amount > waultBal) {
+            _amount = waultBal;
+        }
+        if (_amount > 0) IERC20(wault).safeTransfer(msg.sender, _amount);
         return _amount;
     }
 
@@ -294,6 +319,10 @@ contract WaultBtcbVault is ERC20, Ownable {
         waultRewardPerBlock = _amount.div(endForDistributeWault.sub(startForDistributeWault));
     }
 
+    function setWaultFeeFactor(uint256 _factor) external onlyAdmin {
+        waultFeeFactor = _factor;
+    }
+
     function setWaultRewardMode(bool _flag) external onlyAdmin {
         enabledWaultReward = _flag;
     }
@@ -306,7 +335,7 @@ contract WaultBtcbVault is ERC20, Ownable {
      * @dev Sets the candidate for the new strat to use with this vault.
      * @param _implementation The address of the candidate strategy.  
      */
-    function proposeStrat(address _implementation) public onlyOwner {
+    function proposeStrat(address _implementation) public onlyAdmin {
         stratCandidate = StratCandidate({ 
             implementation: _implementation,
             proposedTime: block.timestamp
@@ -321,7 +350,7 @@ contract WaultBtcbVault is ERC20, Ownable {
      * happening in +100 years for safety. 
      */
 
-    function upgradeStrat() public onlyOwner {
+    function upgradeStrat() public onlyAdmin {
         require(stratCandidate.implementation != address(0), "There is no candidate");
         require(stratCandidate.proposedTime.add(approvalDelay) < block.timestamp, "Delay has not passed");
         
@@ -339,14 +368,21 @@ contract WaultBtcbVault is ERC20, Ownable {
      * @dev Rescues random funds stuck that the strat can't handle.
      * @param _token address of the token to rescue.
      */
-    function inCaseTokensGetStuck(address _token) external onlyOwner {
+    function inCaseTokensGetStuck(address _token) external onlyAdmin {
         require(_token != address(token), "!token");
 
         uint256 amount = IERC20(_token).balanceOf(address(this));
         IERC20(_token).safeTransfer(msg.sender, amount);
     }
 
-    function setApprovalDelay(uint256 _delay) external onlyOwner {
+    function emergencyWithdraw(address _token) external onlyAdmin {
+        require(_token == address(token) || _token == wault, "!token");
+
+        uint256 amount = IERC20(_token).balanceOf(address(this));
+        IERC20(_token).safeTransfer(msg.sender, amount);
+    }
+
+    function setApprovalDelay(uint256 _delay) external onlyAdmin {
         approvalDelay = _delay;
     }
 }
