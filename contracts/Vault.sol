@@ -42,7 +42,7 @@ contract WaultBtcbVault is ERC20, Ownable {
     bool public enabledWaultReward = true;
     uint256 public startForDistributeWault;
     uint256 public endForDistributeWault;
-    uint256 public waultFeeFactor = uint256(1e10);
+    uint256 public waultFeeFactor = uint256(1e12);
     // 100 WAULT rewards per month in default
     uint256 public waultRewardPerBlock = uint256(100 ether).div(864000);
     uint256 public lastRewardBlock;
@@ -89,7 +89,7 @@ contract WaultBtcbVault is ERC20, Ownable {
 
         tokenToWaultPath = [_token, wbnb, wault];
 
-        IERC20(wault).safeApprove(pancakeRouter, uint256(-1));
+        IERC20(_token).safeApprove(pancakeRouter, uint256(-1));
     }
 
     function setStrategy(address _strategy) external onlyOwner {

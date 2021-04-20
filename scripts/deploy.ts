@@ -48,12 +48,12 @@ async function deploy() {
 
     const vaultFactory: WaultBtcbVault__factory = new WaultBtcbVault__factory(deployer);
     let vault: WaultBtcbVault = await vaultFactory.attach(vaultAddress).connect(deployer);
-    if ("redeploy" && false) {
+    if ("redeploy" && true) {
         vault = await vaultFactory.deploy(btcbAddress);
     }
     console.log(`Deployed Vault... (${vault.address})`);
     const strategyFactory: WaultBtcbVenusStrategy__factory = new WaultBtcbVenusStrategy__factory(deployer);
-    let strategy: WaultBtcbVenusStrategy;// = strategyFactory.attach(strategyAddress).connect(deployer);
+    let strategy: WaultBtcbVenusStrategy = strategyFactory.attach(strategyAddress).connect(deployer);
     if ("redeploy" && true) {
         strategy = await strategyFactory.deploy(vault.address);
     }
@@ -61,9 +61,9 @@ async function deploy() {
 
     console.log("Setting strategy address...");
     await vault.setStrategy(strategy.address);
-    // console.log("Setting Wault reward factors...");
-    // const block = await ethers.getDefaultProvider(url).getBlockNumber();
-    // await vault.setWaultRewardFactors(parseEther('1000'), block, block+864000);
+    console.log("Setting Wault reward factors...");
+    const block = await ethers.getDefaultProvider(url).getBlockNumber();
+    await vault.setWaultRewardFactors(parseEther('1000'), block, block+864000);
     if ("Disable Wault Reward" && false) {
         await vault.setWaultRewardMode(false);
     }

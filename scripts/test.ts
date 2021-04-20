@@ -50,7 +50,7 @@ async function deploy() {
     const vaultFactory: WaultBtcbVault__factory = new WaultBtcbVault__factory(deployer);
     const vault: WaultBtcbVault = await vaultFactory.attach(vaultAddress).connect(deployer);
     const strategyFactory: WaultBtcbVenusStrategy__factory = new WaultBtcbVenusStrategy__factory(deployer);
-    const strategy: WaultBtcbVenusStrategy = await strategyFactory.attach("0x92E21d583D8df5E38A7AbDd0B14C1550FF843F76").connect(deployer);
+    const strategy: WaultBtcbVenusStrategy = await strategyFactory.attach(strategyAddress).connect(deployer);
     console.log(`Deployed Vault... (${vault.address})`);
     console.log(`Deployed Strategy... (${strategy.address})`);
 

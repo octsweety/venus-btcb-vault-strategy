@@ -411,6 +411,7 @@ contract WaultBtcbVenusStrategy is Ownable, ReentrancyGuard, Pausable {
         if (wantBal < _wantAmt) {
             _deleverage(_wantAmt.sub(wantBal));
         }
+        updateBalance();
     }
 
     /**
